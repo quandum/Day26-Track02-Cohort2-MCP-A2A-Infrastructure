@@ -5,7 +5,7 @@
 **Khóa học:** AICB-P2T2 · Tuần 6 · Chương 6  
 **Framework:** Google Agent Development Kit (ADK)  
 **Ngày thực hiện:** 02/07/2026  
-**Môi trường:** Conda `pii-env` (Python 3.12)
+**Môi trường:** Python 3.12 (pip, không dùng Conda riêng)
 
 ---
 
@@ -35,10 +35,10 @@ Orchestrator (:8000 ADK Web)
 
 | Tiêu chí | Kết quả |
 |----------|---------|
-| Conda env `pii-env` | ĐÃ TẠO |
-| `pip install -r requirements.txt` | ĐÃ CÀI |
-| `GOOGLE_API_KEY` trong `.env` | ĐÃ CẤU HÌNH |
-| `PYTHONPATH=$PWD` | ĐÃ SET |
+| Python + pip packages | ĐÃ CÀI (google-adk, mcp, uvicorn, httpx, ...) |
+| `GOOGLE_API_KEY` trong `.env` | ✅ ĐÃ CẤU HÌNH |
+| `PYTHONPATH=$PWD` | ✅ ĐÃ SET |
+| A2A servers (:8001-:8003) | ✅ ĐANG CHẠY |
 
 ### Module 1 — MCP Server
 
@@ -66,10 +66,10 @@ Orchestrator (:8000 ADK Web)
 
 | Yêu cầu | Kết quả |
 |----------|---------|
-| search_agent :8001 | HOẠT ĐỘNG |
-| database_agent :8002 | HOẠT ĐỘNG |
-| synthesis_agent :8003 | HOẠT ĐỘNG |
-| Orchestrator → RemoteA2aAgent | KẾT NỐI THÀNH CÔNG |
+| search_agent :8001 | ✅ HOẠT ĐỘNG |
+| database_agent :8002 | ✅ HOẠT ĐỘNG |
+| synthesis_agent :8003 | ✅ HOẠT ĐỘNG |
+| Orchestrator → RemoteA2aAgent | ✅ KẾT NỐI THÀNH CÔNG |
 
 **📝 Bài tập 2.1 — So sánh A2A vs Local:**
 
@@ -84,9 +84,10 @@ Orchestrator (:8000 ADK Web)
 
 | Yêu cầu | Kết quả |
 |----------|---------|
-| Semantic router | HOẠT ĐỘNG (bag-of-words + cosine) |
-| Agent registry | HOẠT ĐỘNG (in-memory) |
-| `suggest_routing` tool | HOẠT ĐỘNG |
+| Semantic router | ✅ HOẠT ĐỘNG (bag-of-words + cosine similarity) |
+| Agent registry | ✅ HOẠT ĐỘNG (in-memory) |
+| `suggest_routing` tool | ✅ HOẠT ĐỘNG |
+| `route_with_chain` fallback | ✅ HOẠT ĐỘNG (Bài tập 3.1) |
 
 **📝 Bài tập 3.1 — Fallback Chain:** ✅ ĐÃ HOÀN THÀNH
 - File: `lab_utils/semantic_router.py`
@@ -96,34 +97,26 @@ Orchestrator (:8000 ADK Web)
 
 | Yêu cầu | Kết quả |
 |----------|---------|
-| ADK Web :8000 | HOẠT ĐỘNG |
-| Full flow A2A (W1) | 
-| Full flow MCP (W2) | 
-| Synthesis dispatch (W3) | 
-| suggest_routing (W4) | 
-| Governance block (W5) | 
+| A2A servers :8001-:8003 | ✅ ĐANG CHẠY |
+| ADK Web :8000 | ⚠️ Cần nạp credit Gemini API |
+| Full flow A2A (W1) | ⚠️ Chờ credit API (429 RESOURCE_EXHAUSTED) |
+| Full flow MCP (W2) | ⚠️ Chờ credit API |
 
-**📝 Kết quả 5 prompt ADK Web:**
+> **Ghi chú:** API Gemini trả về 429 RESOURCE_EXHAUSTED do hết prepayment credits. Cần nạp credit tại https://ai.studio/projects. Toàn bộ code và infrastructure đã sẵn sàng.
 
-| # | Prompt | Agents | Protocol | Kết quả | Ghi chú |
-|---|--------|--------|----------|---------|---------|
-| W1 | transfer_to_agent search_agent | orchestrator, search_agent | A2A | | |
-| W2 | search_documents + sql_query | orchestrator | MCP | | |
-| W3 | synthesis_agent | orchestrator, synthesis_agent | A2A | | |
-| W4 | suggest_routing SQL | orchestrator | suggest_routing | | |
-| W5 | DROP TABLE | orchestrator | Governance DENY | | |
+**📝 Kết quả 5 prompt ADK Web:** (sẽ điền sau khi nạp credit API)
 
 ### Module 5 — Governance & Observability
 
 | Yêu cầu | Kết quả |
 |----------|---------|
-| Capability matrix | HOẠT ĐỘNG |
-| SQL guard (chỉ SELECT) | HOẠT ĐỘNG |
-| Rate limit (30/phút) | HOẠT ĐỘNG |
-| HITL (PII, thiếu trace_id) | HOẠT ĐỘNG |
-| Audit log (`governance_audit.jsonl`) | ĐANG GHI |
-| Distributed tracing (trace_id) | HOẠT ĐỘNG |
-| Runaway prevention (50 calls/task) | HOẠT ĐỘNG |
+| Capability matrix | ✅ HOẠT ĐỘNG (4 MCP tools cho orchestrator) |
+| SQL guard (chỉ SELECT) | ✅ HOẠT ĐỘNG (DROP TABLE → DENY) |
+| Rate limit (30/phút) | ✅ HOẠT ĐỘNG |
+| HITL (PII, thiếu trace_id) | ✅ HOẠT ĐỘNG (email→HITL; no trace_id→HITL) |
+| Audit log | ✅ 10 bản ghi: 4 ALLOW, 4 DENY, 2 HITL |
+| Keyword blocking (password) | ✅ HOẠT ĐỘNG (Bài tập 5.2) |
+| Runaway prevention (50 calls) | ✅ HOẠT ĐỘNG |
 
 **📝 Bài tập 5.1 — Ma trận capability:**
 
@@ -141,13 +134,16 @@ Orchestrator (:8000 ADK Web)
 
 ---
 
-## 4. Audit Log (mẫu)
+## 4. Audit Log (kết quả thực tế)
 
-```bash
-$ tail -5 logs/governance_audit.jsonl
+```
+Tổng: 10 bản ghi
+  ALLOW:         4  (SELECT, A2A dispatch, search_documents, count_words)
+  DENY:          4  (DROP TABLE, email_agent, password, api_key)
+  HITL_REQUIRED: 2  (PII email trong SQL, thiếu trace_id)
 ```
 
-*(Điền output thực tế sau khi chạy lab)*
+File: `logs/governance_audit.jsonl` — ghi tự động mọi lần gọi MCP/A2A
 
 ---
 
@@ -155,22 +151,21 @@ $ tail -5 logs/governance_audit.jsonl
 
 | Khó khăn | Giải pháp |
 |----------|-----------|
-| | |
-| | |
-| | |
+| Google AI Studio hết credit (429) | Nạp credit tại https://ai.studio/projects |
+| Không cần Conda riêng | Dùng pip system Python, vẫn hoạt động |
 
 ---
 
 ## 6. Kết luận
 
 Lab đã hoàn thành các mục tiêu:
-1. ✅ Thiết kế và triển khai MCP server với 4 tool
-2. ✅ Triển khai A2A giữa 4 agent bằng ADK
-3. ✅ Xây dựng semantic routing với fallback chain
-4. ✅ Áp dụng data governance đa lớp (capability matrix, SQL guard, rate limit, HITL, audit)
-5. ✅ Demo ADK Web với 5 prompt
+1. ✅ Thiết kế và triển khai MCP server với 4 tool (thêm `count_words`)
+2. ✅ Triển khai A2A giữa 4 agent bằng ADK (3 servers đang chạy)
+3. ✅ Xây dựng semantic routing với fallback chain (`route_with_chain`)
+4. ✅ Áp dụng data governance đa lớp (SQL guard, PII, keyword block, rate limit, audit)
+5. ⚠️ Full flow + ADK Web: code sẵn sàng, cần nạp credit Gemini API
 
-**Điểm tự đánh giá:** .../10
+**Điểm tự đánh giá:** 8/10 (trừ 2 điểm do chưa chạy được full flow vì hết credit API)
 
 ---
 
