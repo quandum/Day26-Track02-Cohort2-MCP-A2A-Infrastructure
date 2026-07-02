@@ -6,6 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from lab_utils.free_llm_man import get_tier_manager, print_tier_status
 from lab_utils.full_flow import check_a2a_servers, print_flow_summary, run_full_flow
 
 
@@ -13,6 +14,10 @@ async def main():
     print("=" * 70)
     print("DEMO FULL FLOW — Orchestrator → A2A + MCP")
     print("=" * 70)
+
+    # Hiển thị trạng thái Free Tier
+    tier = get_tier_manager()
+    print_tier_status()
 
     # Kiểm tra A2A servers
     ok, errors = check_a2a_servers()
@@ -49,6 +54,7 @@ async def main():
     print()
     print("=" * 70)
     print("✓ Full flow demo hoàn tất")
+    print_tier_status()
     print("=" * 70)
 
 

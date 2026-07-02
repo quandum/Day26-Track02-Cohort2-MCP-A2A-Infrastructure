@@ -14,6 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from lab_utils.free_llm_man import get_tier_manager, print_tier_status
+
 AGENT_CARDS = {
     "search_agent": "http://localhost:8001/.well-known/agent-card.json",
     "database_agent": "http://localhost:8002/.well-known/agent-card.json",
@@ -52,6 +54,17 @@ async def run_full_flow(
             "A2A servers chưa sẵn sàng. Chạy Module 0.5 trước.\n"
             + "\n".join(f"  - {e}" for e in errors)
         )
+
+    # Kiểm tra free tier limits trước khi gọi Gemini API
+    tier = get_tier_manager()
+    tier_ok, tier_msg = tier.check_limits()
+    if not tier_ok:
+        raise RuntimeError(f"Free tier limit reached: {tier_msg}")
+    if verbose:
+        print_tier_status()
+        warn = tier.warn_if_near_limit()
+        if warn:
+            print(f"  {warn}")
 
     warnings.filterwarnings("ignore", category=UserWarning)
 

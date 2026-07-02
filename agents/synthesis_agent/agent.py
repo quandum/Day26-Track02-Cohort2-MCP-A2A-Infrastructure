@@ -15,6 +15,12 @@ from lab_utils.env_setup import load_lab_env, require_api_key
 load_lab_env()
 require_api_key()
 
+from lab_utils.free_llm_man import get_tier_manager, print_tier_status
+
+tier = get_tier_manager()
+print("[synthesis_agent] Free Tier status:")
+print_tier_status()
+
 from lab_utils.governance import (
     get_guard,
     governance_before_agent_callback,

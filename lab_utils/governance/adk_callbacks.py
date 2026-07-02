@@ -11,6 +11,7 @@ from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.tool_context import ToolContext
 
 from lab_utils.governance.guard import get_guard
+from lab_utils.free_llm_man import get_tier_manager
 
 # Tool nội bộ ADK dùng để chuyển giao giữa agent.
 _TRANSFER_TOOL_NAMES = frozenset({
@@ -203,5 +204,20 @@ async def governance_before_agent_callback(
         state["governance_trace_id"] = tid
     if not state.get("task_id"):
         state["task_id"] = f"task-{str(state['trace_id'])[:8]}"
+
+    # ── Free Tier tracking ──────────────────────────────────────────
+    tier_mgr = get_tier_manager()
+    ok, msg = tier_mgr.check_limits()
+    if not ok:
+        # Ghi cảnh báo vào state thay vì raise (tránh crash ADK flow)
+        state["tier_blocked"] = True
+        state["tier_blocked_reason"] = msg
+        import warnings
+        warnings.warn(f"Free Tier limit: {msg}")
+    else:
+        state["tier_blocked"] = False
+        # Ghi nhận LLM call ước tính (mỗi agent invocation ≈ 1 LLM call)
+        tier_mgr.record_call(tokens=0)
+        state["governance_tool_count"] = state.get("governance_tool_count", 0) + 1
 
     return None

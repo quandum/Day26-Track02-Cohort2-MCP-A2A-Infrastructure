@@ -36,8 +36,9 @@ Orchestrator (:8000 ADK Web)
 | Tiêu chí | Kết quả |
 |----------|---------|
 | Python + pip packages | ĐÃ CÀI (google-adk, mcp, uvicorn, httpx, ...) |
-| `GOOGLE_API_KEY` trong `.env` | ✅ ĐÃ CẤU HÌNH |
+| `GOOGLE_API_KEY` trong `.env` | ✅ ĐÃ CẤU HÌNH (Free Tier) |
 | `PYTHONPATH=$PWD` | ✅ ĐÃ SET |
+| `free_llm_man.py` | ✅ Quản lý rate limit Free Tier |
 | A2A servers (:8001-:8003) | ✅ ĐANG CHẠY |
 
 ### Module 1 — MCP Server
@@ -151,8 +152,9 @@ File: `logs/governance_audit.jsonl` — ghi tự động mọi lần gọi MCP/A
 
 | Khó khăn | Giải pháp |
 |----------|-----------|
-| Google AI Studio hết credit (429) | Nạp credit tại https://ai.studio/projects |
+| API key Free Tier `limit: 0` (429) | Cần kiểm tra project Google Cloud đã bật Gemini API + billing |
 | Không cần Conda riêng | Dùng pip system Python, vẫn hoạt động |
+| Quản lý rate limit Free Tier | Đã tạo `lab_utils/free_llm_man.py` — RPM/RPD tracking + retry backoff |
 
 ---
 
