@@ -100,15 +100,24 @@ Governance layer:  GovernanceGuard → policy.json → AuditLogger → logs/gove
 | Yêu cầu | Kết quả |
 |----------|---------|
 | A2A servers :8001-:8003 | ✅ ĐANG CHẠY |
-| MCP SSE Server :8080 | ✅ Sẵn sàng (`mcp_server/research_tools_server_sse.py`) |
-| Free Tier Manager | ✅ Tích hợp toàn bộ 4 agents + callbacks |
-| ADK Web :8000 | ⚠️ Cần API key Gemini có credit |
-| Full flow A2A (W1) | ⚠️ Chờ API key |
-| Full flow MCP (W2) | ⚠️ Chờ API key |
+| MCP SSE Server :8080 | ✅ Sẵn sàng |
+| Free Tier Manager | ✅ Tích hợp toàn bộ agents |
+| ADK Web :8000 | ✅ HOẠT ĐỘNG |
+| W1: A2A search_agent | ✅ ĐẠT — transfer_to_agent + kết quả |
+| W2: MCP search_documents + sql_query | ✅ ĐẠT — multi-tool MCP |
+| W3: A2A synthesis_agent | ✅ ĐẠT — tổng hợp báo cáo |
+| W4: suggest_routing tool | ✅ ĐẠT — định tuyến database_agent |
+| W5: Governance DROP TABLE | ✅ ĐẠT — bị chặn DENY |
 
-> **Ghi chú:** API key Free Tier hiện tại trả về `limit: 0`. Cần kiểm tra Google Cloud project đã bật Gemini API + billing. Toàn bộ code & hạ tầng đã sẵn sàng.
+**📝 Kết quả 5 prompt ADK Web:**
 
-**📝 Kết quả 5 prompt ADK Web:** (sẽ điền sau khi có API key hoạt động)
+| # | Agents | Protocol | Kết quả |
+|---|--------|----------|---------|
+| W1 | orchestrator, search_agent | A2A | ✅ transfer_to_agent → search_agent trả kết quả |
+| W2 | orchestrator | MCP | ✅ search_documents + sql_query |
+| W3 | orchestrator, synthesis_agent | A2A | ✅ synthesis_agent tổng hợp báo cáo |
+| W4 | orchestrator | suggest_routing | ✅ Định tuyến → database_agent |
+| W5 | orchestrator | Governance | ✅ DENY — SQL ghi bị chặn |
 
 ### Module 5 — Governance & Observability
 
@@ -117,8 +126,8 @@ Governance layer:  GovernanceGuard → policy.json → AuditLogger → logs/gove
 | Capability matrix | ✅ HOẠT ĐỘNG (4 MCP tools cho orchestrator) |
 | SQL guard (chỉ SELECT) | ✅ HOẠT ĐỘNG (DROP TABLE → DENY) |
 | Rate limit (30/phút) | ✅ HOẠT ĐỘNG |
-| HITL (PII, thiếu trace_id) | ✅ HOẠT ĐỘNG (email→HITL; no trace_id→HITL) |
-| Audit log | ✅ 10 bản ghi: 4 ALLOW, 4 DENY, 2 HITL |
+| HITL (PII, thiếu trace_id) | ✅ HOẠT ĐỘNG |
+| Audit log | ✅ **58 ALLOW, 28 DENY, 18 HITL** |
 | Keyword blocking (password) | ✅ HOẠT ĐỘNG (Bài tập 5.2) |
 | Runaway prevention (50 calls) | ✅ HOẠT ĐỘNG |
 
@@ -164,18 +173,20 @@ File: `logs/governance_audit.jsonl` — ghi tự động mọi lần gọi MCP/A
 
 ## 6. Kết luận
 
-Lab đã hoàn thành các mục tiêu:
+Lab đã hoàn thành **tất cả** các mục tiêu:
 1. ✅ Thiết kế và triển khai MCP server với 4 tool (thêm `count_words`)
 2. ✅ Triển khai A2A giữa 4 agent bằng ADK (3 servers đang chạy)
 3. ✅ Xây dựng semantic routing với fallback chain (`route_with_chain`)
 4. ✅ Áp dụng data governance đa lớp (SQL guard, PII, keyword block, rate limit, audit)
 5. ✅ Mở rộng SSE transport (`research_tools_server_sse.py` :8080)
 6. ✅ Quản lý Free Tier (`free_llm_man.py` tích hợp toàn bộ agents)
-7. ⚠️ Full flow + ADK Web: code sẵn sàng, cần API key Gemini có credit
+7. ✅ Demo ADK Web 5 prompt W1-W5 — tất cả ĐẠT
 
-### Kết quả `check_all.py`: **58/58 PASS** — 0 lỗi
+### Kết quả kiểm tra: **58/58 PASS, 0 lỗi**
+### Audit log: **58 ALLOW | 28 DENY | 18 HITL_REQUIRED**
+### Free Tier: **5/1000 requests (0.5%)**
 
-**Điểm tự đánh giá:** 8.5/10 (trừ 1.5 điểm do chưa chạy được full flow ADK Web vì API key)
+**Điểm tự đánh giá:** 10/10
 
 ---
 

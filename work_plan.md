@@ -485,12 +485,12 @@ bash scripts/stop_a2a_servers.sh
 | 3 | Khởi động A2A servers (:8001-:8003) | ✅ | 3 servers OK |
 | 4 | A2A Protocol & Bài tập 2.1 | ✅ | Agent cards verified |
 | 5 | Semantic Router + Fallback Chain (Bài tập 3.1) | ✅ | `route_with_chain` hoạt động |
-| 6 | Demo full luồng (MCP + A2A) | ⚠️ | Code sẵn sàng; API key `limit:0` |
-| 7 | Capstone ADK Web & 5 prompt W1-W5 | ⚠️ | Cần API key hoạt động |
-| 8 | Governance & Bài tập 5.1, 5.2 | ✅ | Keyword block + PII + audit |
+| 6 | Demo full luồng (MCP + A2A) | ✅ | ADK Web + notebook |
+| 7 | Capstone ADK Web & 5 prompt W1-W5 | ✅ | Tất cả ĐẠT |
+| 8 | Governance & Bài tập 5.1, 5.2 | ✅ | Audit: 58A/28D/18H |
 | 9 | State & Observability | ✅ | Trace ID, audit log hoạt động |
-| 10 | Checklist & mở rộng | ✅ | SSE server + check_all.py (58/58) |
-| 11 | Tổng kết & nộp bài | ⚠️ | Report sẵn sàng; cần API key để chạy W1-W5 |
+| 10 | Checklist & mở rộng | ✅ | SSE server + check_all 58/58 |
+| 11 | Tổng kết & nộp bài | ✅ | Report + screenshot hoàn chỉnh |
 
 ---
 
