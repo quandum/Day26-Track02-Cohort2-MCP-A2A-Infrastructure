@@ -29,12 +29,13 @@ Xây dựng hệ thống **4 agent** (1 orchestrator + 3 specialist) giao tiếp
 
 | Thành phần | Yêu cầu | Trạng thái |
 |------------|---------|-----------|
-| MCP Server | 3+ tools qua stdio | Cần hoàn thiện |
-| Agent Registry | Health check + khám phá capability | Cần hoàn thiện |
-| Semantic Router | Định tuyến request → specialist | Cần hoàn thiện |
-| Demo Multi-Agent | Orchestrator + 3 specialist qua A2A | Cần hoàn thiện |
-| Trace | Toàn bộ luồng trong log | Cần hoàn thiện |
-| Data Governance | Policy MCP/A2A + audit log + HITL | Cần hoàn thiện |
+| MCP Server | 3+ tools qua stdio | ✅ 4 tools (thêm `count_words`) |
+| Agent Registry | Health check + khám phá capability | ✅ Hoạt động |
+| Semantic Router | Định tuyến request → specialist | ✅ + `route_with_chain` |
+| Free Tier Manager | Quản lý gọi API free tier | ✅ `free_llm_man.py` |
+| Demo Multi-Agent | Orchestrator + 3 specialist qua A2A | ✅ Servers chạy; ⚠️ Full flow cần API key |
+| Trace | Toàn bộ luồng trong log | ✅ Audit log JSONL |
+| Data Governance | Policy MCP/A2A + audit log + HITL | ✅ Keyword block, PII, rate limit |
 
 ---
 
@@ -110,52 +111,17 @@ Day26-Track02-lab/
 
 ## 3. Kế hoạch từng bước
 
-### GIAI ĐOẠN 1: THIẾT LẬP MÔI TRƯỜNG (Module 0)
+### GIAI ĐOẠN 1: THIẾT LẬP MÔI TRƯỜNG (Module 0) ✅
 
-#### Bước 1.1 — Tạo & kích hoạt môi trường Conda
+> **Thực tế:** Không dùng Conda riêng. Python 3.12 system + pip. Tất cả dependencies đã cài sẵn.
 
-```bash
-conda create -n pii-env python=3.12 -y
-conda activate pii-env
-```
-
-- **Mục tiêu:** Môi trường Python 3.12 sạch, tách biệt khỏi base Anaconda.
-- **Kiểm tra:** `conda info --envs` hiển thị `pii-env`.
-
-#### Bước 1.2 — Cài đặt dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-- **Các gói chính:**
-  - `google-adk[a2a]>=1.0.0` — Google ADK + A2A extension
-  - `mcp>=1.0.0` — Model Context Protocol SDK
-  - `uvicorn>=0.30.0` — ASGI server cho A2A HTTP
-  - `httpx>=0.27.0` — HTTP client kiểm tra agent card
-  - `numpy>=1.26.0` — Vector operations cho semantic router
-  - `python-dotenv>=1.0.0` — Load biến môi trường
-  - `jupyter>=1.0.0`, `ipykernel>=6.29.0` — Notebook
-  - `cryptography>=46.0.7,<47.0.0` — Tương thích governance toolkit
-- **Kiểm tra:** `pip list | grep google-adk` hiển thị version.
-
-#### Bước 1.3 — Cấu hình biến môi trường
-
-```bash
-cp .env.example .env
-# Thêm GOOGLE_API_KEY vào .env
-export PYTHONPATH=$PWD
-```
-
-- **Mục tiêu:** API key Google AI Studio cho Gemini model.
-- **Kiểm tra:** `python -c "import os; from dotenv import load_dotenv; load_dotenv(); print(os.getenv('GOOGLE_API_KEY')[:10] + '...')"`
-
-#### Bước 1.4 — Kiểm tra notebook kernel
-
-- Mở `day26_mcp_a2a_lab.ipynb` trong Jupyter.
-- Chọn kernel `pii-env`.
-- Chạy cell `#VSC-f81fc85b` (pip install) và cell `#VSC-e9bbb8ce` (load env).
-- **Kết quả mong đợi:** `✓ Môi trường sẵn sàng`.
+| Bước | Nội dung | Kết quả |
+|------|----------|--------|
+| 1.1 | Python + pip | ✅ Python 3.12, google-adk, mcp, uvicorn, httpx |
+| 1.2 | `GOOGLE_API_KEY` trong `.env` | ✅ Free Tier key |
+| 1.3 | `export PYTHONPATH=$PWD` | ✅ Đã set |
+| 1.4 | Notebook kernel | ✅ Sẵn sàng |
+| 1.5 | `free_llm_man.py` | ✅ Quản lý rate limit (thêm trong quá trình) |
 
 ---
 
@@ -511,20 +477,20 @@ bash scripts/stop_a2a_servers.sh
 
 ## 4. Bảng phân công & tiến độ
 
-| Giai đoạn | Bước | Nội dung | Thời lượng dự kiến | Trạng thái |
-|-----------|------|----------|-------------------|------------|
-| 1 | 1.1–1.4 | Thiết lập môi trường | 15 phút | ⬜ Chưa bắt đầu |
-| 2 | 2.1–2.3 | MCP Server & bài tập 1.1, 1.2 | 25 phút | ⬜ Chưa bắt đầu |
-| 3 | 3.1–3.2 | Khởi động A2A servers | 10 phút | ⬜ Chưa bắt đầu |
-| 4 | 4.1–4.2 | A2A Protocol & bài tập 2.1 | 10 phút | ⬜ Chưa bắt đầu |
-| 5 | 5.1–5.4 | Semantic Router & bài tập 3.1 | 15 phút | ⬜ Chưa bắt đầu |
-| 6 | 6.1–6.2 | Demo full luồng | 10 phút | ⬜ Chưa bắt đầu |
-| 7 | 7.1–7.5 | Capstone ADK Web & 5 prompt | 20 phút | ⬜ Chưa bắt đầu |
-| 8 | 8.1–8.4 | Governance & bài tập 5.1, 5.2 | 20 phút | ⬜ Chưa bắt đầu |
-| 9 | 9.1–9.3 | State & Observability | 10 phút | ⬜ Chưa bắt đầu |
-| 10 | 10.1–10.2 | Checklist & mở rộng | 15 phút | ⬜ Chưa bắt đầu |
-| 11 | 11.1–11.4 | Tổng kết & nộp bài | 10 phút | ⬜ Chưa bắt đầu |
-| **Tổng** | | | **~2 giờ 40 phút** | |
+| Giai đoạn | Nội dung | Trạng thái | Ghi chú |
+|-----------|----------|------------|--------|
+| 1 | Thiết lập môi trường | ✅ | Python 3.12 pip, không Conda |
+| 2 | MCP Server + `count_words` (Bài tập 1.1, 1.2) | ✅ | 4 tools: +count_words |
+| 2b | Free Tier Manager `free_llm_man.py` | ✅ | Tích hợp 4 agents + adk_callbacks + notebook |
+| 3 | Khởi động A2A servers (:8001-:8003) | ✅ | 3 servers OK |
+| 4 | A2A Protocol & Bài tập 2.1 | ✅ | Agent cards verified |
+| 5 | Semantic Router + Fallback Chain (Bài tập 3.1) | ✅ | `route_with_chain` hoạt động |
+| 6 | Demo full luồng (MCP + A2A) | ⚠️ | Code sẵn sàng; API key `limit:0` |
+| 7 | Capstone ADK Web & 5 prompt W1-W5 | ⚠️ | Cần API key hoạt động |
+| 8 | Governance & Bài tập 5.1, 5.2 | ✅ | Keyword block + PII + audit |
+| 9 | State & Observability | ✅ | Trace ID, audit log hoạt động |
+| 10 | Checklist & mở rộng | ⚠️ | Mở rộng tùy chọn |
+| 11 | Tổng kết & nộp bài | ⬜ | Cần điền W1-W5 + screenshot |
 
 ---
 
