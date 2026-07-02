@@ -28,6 +28,11 @@
             "allowed": true,
             "data_classification": "internal",
             "max_input_chars": 10000
+          },
+          "count_words": {
+            "allowed": true,
+            "data_classification": "internal",
+            "max_text_length": 50000
           }
         }
       }

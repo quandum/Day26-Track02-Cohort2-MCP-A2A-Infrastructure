@@ -91,6 +91,20 @@ class GovernanceGuard:
                 )
                 self._log(decision, "mcp_tool_call", query, trace_id)
                 return decision
+            # Chặn từ khóa nhạy cảm trong truy vấn tìm kiếm (Bài tập 5.2)
+            blocked_keywords = ["password", "token", "secret", "api_key", "private_key"]
+            query_lower = query.lower()
+            for kw in blocked_keywords:
+                if kw in query_lower:
+                    decision = GovernanceDecision(
+                        verdict=GovernanceVerdict.DENY,
+                        reason=f"Truy vấn chứa từ khóa bị chặn: '{kw}'",
+                        actor_id=actor_id,
+                        connection_type=ConnectionType.MCP,
+                        resource=f"mcp:research-tools/{tool_name}",
+                    )
+                    self._log(decision, "mcp_tool_call", query, trace_id)
+                    return decision
 
         if tool_name == "sql_query":
             sql = str(arguments.get("sql", ""))
