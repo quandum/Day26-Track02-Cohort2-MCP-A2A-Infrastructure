@@ -1,0 +1,210 @@
+"""Ngày 26 — MCP server với transport SSE (HTTP) trên cổng 8080.
+
+Khác với bản stdio (research_tools_server.py), bản này dùng FastAPI + SSE
+để triển khai MCP server qua HTTP, phù hợp triển khai từ xa / K8s.
+
+Extension cho capstone — Thử thách mở rộng #1: Transport SSE.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+from mcp.types import TextContent, Tool
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from lab_utils.governance import get_guard
+
+GOVERNANCE_ACTOR_ID = os.getenv("GOVERNANCE_ACTOR_ID", "orchestrator")
+GOVERNANCE_TRACE_ID = os.getenv("GOVERNANCE_TRACE_ID")
+GOVERNANCE_TASK_ID = os.getenv("GOVERNANCE_TASK_ID", "default")
+
+# ── Dữ liệu mô phỏng ─────────────────────────────────────────────────────
+DOCUMENTS: list[dict[str, str]] = [
+    {
+        "id": "doc-1",
+        "title": "VinUni AI Curriculum Overview",
+        "body": "Phase 2 Track 2 covers MCP, A2A, and multi-agent orchestration.",
+    },
+    {
+        "id": "doc-2",
+        "title": "MCP Transport Options",
+        "body": "MCP supports stdio for local dev and HTTP+SSE for remote deployment.",
+    },
+    {
+        "id": "doc-3",
+        "title": "A2A Task Lifecycle",
+        "body": "Tasks move through submitted, working, input-required, completed, or failed.",
+    },
+]
+
+SQL_ROWS: list[dict[str, Any]] = [
+    {"agent": "search_agent", "tasks_completed": 42, "avg_latency_ms": 820},
+    {"agent": "database_agent", "tasks_completed": 31, "avg_latency_ms": 1100},
+    {"agent": "synthesis_agent", "tasks_completed": 28, "avg_latency_ms": 2400},
+]
+
+# ── Khởi tạo ──────────────────────────────────────────────────────────────
+app = Server("research-tools-sse")
+guard = get_guard()
+
+
+# ── Tool implementations ──────────────────────────────────────────────────
+def _search_documents(query: str) -> list[dict[str, str]]:
+    query_lower = query.lower()
+    return [
+        doc
+        for doc in DOCUMENTS
+        if query_lower in doc["title"].lower() or query_lower in doc["body"].lower()
+    ]
+
+
+def _sql_query(sql: str) -> list[dict[str, Any]]:
+    if "AGENT_METRICS" not in sql.upper():
+        return []
+    return SQL_ROWS
+
+
+def _summarize_text(text: str, max_bullets: int = 3) -> list[str]:
+    sentences = [s.strip() for s in text.replace("\n", " ").split(".") if s.strip()]
+    return [f"- {sentence}" for sentence in sentences[:max_bullets]]
+
+
+def _count_words(text: str) -> dict:
+    words = text.split()
+    return {
+        "word_count": len(words),
+        "char_count": len(text),
+        "char_count_no_spaces": len(text.replace(" ", "").replace("\n", "").replace("\t", "")),
+        "avg_word_length": round(sum(len(w) for w in words) / max(len(words), 1), 1),
+    }
+
+
+# ── MCP Tool registry ────────────────────────────────────────────────────
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    allowed = set(guard.get_allowed_mcp_tools(GOVERNANCE_ACTOR_ID))
+    all_tools = [
+        Tool(
+            name="search_documents",
+            description="Tìm kiếm trong chỉ mục tài liệu nghiên cứu theo từ khóa.",
+            inputSchema={
+                "type": "object",
+                "properties": {"query": {"type": "string", "description": "Từ khóa tìm kiếm"}},
+                "required": ["query"],
+            },
+        ),
+        Tool(
+            name="sql_query",
+            description="Thực thi truy vấn SQL chỉ đọc trên metrics agent.",
+            inputSchema={
+                "type": "object",
+                "properties": {"sql": {"type": "string", "description": "Câu SQL chỉ SELECT"}},
+                "required": ["sql"],
+            },
+        ),
+        Tool(
+            name="summarize_text",
+            description="Tóm tắt đoạn văn thành các gạch đầu dòng.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Văn bản cần tóm tắt"},
+                    "max_bullets": {"type": "integer", "description": "Số gạch đầu dòng tối đa", "default": 3},
+                },
+                "required": ["text"],
+            },
+        ),
+        Tool(
+            name="count_words",
+            description="Đếm số từ và ký tự trong một chuỗi văn bản.",
+            inputSchema={
+                "type": "object",
+                "properties": {"text": {"type": "string", "description": "Văn bản cần đếm từ"}},
+                "required": ["text"],
+            },
+        ),
+    ]
+    return [tool for tool in all_tools if tool.name in allowed]
+
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+    decision = guard.authorize_mcp_tool(
+        actor_id=GOVERNANCE_ACTOR_ID,
+        tool_name=name,
+        arguments=arguments,
+        trace_id=GOVERNANCE_TRACE_ID,
+        task_id=GOVERNANCE_TASK_ID,
+    )
+    if decision.blocked:
+        return [TextContent(type="text", text=json.dumps({
+            "status": "blocked", "governance": decision.verdict.value,
+            "reason": decision.reason,
+        }, ensure_ascii=False))]
+    if decision.needs_approval:
+        return [TextContent(type="text", text=json.dumps({
+            "status": "hitl_required", "governance": decision.verdict.value,
+            "reason": decision.reason, "message": "Cần phê duyệt của người trước khi thực thi.",
+        }, ensure_ascii=False))]
+
+    if name == "search_documents":
+        results = _search_documents(arguments["query"])
+        return [TextContent(type="text", text=json.dumps(results, indent=2, ensure_ascii=False))]
+    if name == "sql_query":
+        rows = _sql_query(arguments["sql"])
+        return [TextContent(type="text", text=json.dumps(rows, indent=2, ensure_ascii=False))]
+    if name == "summarize_text":
+        bullets = _summarize_text(arguments["text"], int(arguments.get("max_bullets", 3)))
+        return [TextContent(type="text", text="\n".join(bullets))]
+    if name == "count_words":
+        stats = _count_words(arguments["text"])
+        return [TextContent(type="text", text=json.dumps(stats, indent=2, ensure_ascii=False))]
+    raise ValueError(f"Tool không xác định: {name}")
+
+
+# ── SSE Transport + Starlette app ─────────────────────────────────────────
+sse = SseServerTransport("/messages/")
+
+
+async def handle_sse(request):
+    """Xử lý kết nối SSE từ MCP client."""
+    async with sse.connect_sse(
+        request.scope, request.receive, request._send
+    ) as streams:
+        await app.run(
+            streams[0], streams[1],
+            app.create_initialization_options(),
+        )
+
+
+starlette_app = Starlette(
+    debug=True,
+    routes=[
+        Route("/sse", endpoint=handle_sse),
+        Mount("/messages/", app=sse.handle_post_message),
+    ],
+)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+    print("=" * 60)
+    print("MCP Server — SSE Transport (HTTP)")
+    print("  Endpoint: http://localhost:8080/sse")
+    print("  Messages: http://localhost:8080/messages/")
+    print("  Tools: search_documents, sql_query, summarize_text, count_words")
+    print("=" * 60)
+    uvicorn.run(starlette_app, host="localhost", port=8080, log_level="info")

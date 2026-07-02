@@ -489,8 +489,8 @@ bash scripts/stop_a2a_servers.sh
 | 7 | Capstone ADK Web & 5 prompt W1-W5 | ⚠️ | Cần API key hoạt động |
 | 8 | Governance & Bài tập 5.1, 5.2 | ✅ | Keyword block + PII + audit |
 | 9 | State & Observability | ✅ | Trace ID, audit log hoạt động |
-| 10 | Checklist & mở rộng | ⚠️ | Mở rộng tùy chọn |
-| 11 | Tổng kết & nộp bài | ⬜ | Cần điền W1-W5 + screenshot |
+| 10 | Checklist & mở rộng | ✅ | SSE server + check_all.py (58/58) |
+| 11 | Tổng kết & nộp bài | ⚠️ | Report sẵn sàng; cần API key để chạy W1-W5 |
 
 ---
 

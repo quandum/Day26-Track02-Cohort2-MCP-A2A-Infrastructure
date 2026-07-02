@@ -23,9 +23,10 @@ Orchestrator (:8000 ADK Web)
   ├── A2A → database_agent   (:8002) — run_sql_query (chỉ SELECT)
   ├── A2A → synthesis_agent  (:8003) — synthesize_report
   └── MCP → research_tools   (stdio) — search_documents, sql_query, summarize_text, count_words
-```
 
-**Governance layer:** `GovernanceGuard` → `policy.json` → `AuditLogger` → `logs/governance_audit.jsonl`
+Free Tier Manager: free_llm_man.py → check_limits() → record_call() → logs/free_tier_usage.json
+Governance layer:  GovernanceGuard → policy.json → AuditLogger → logs/governance_audit.jsonl
+```
 
 ---
 
@@ -94,18 +95,20 @@ Orchestrator (:8000 ADK Web)
 - File: `lab_utils/semantic_router.py`
 - Phương thức `route_with_chain(request, chain)` thử route chính trước; nếu score < threshold thì duyệt fallback chain có thứ tự
 
-### Module 4 — Capstone ADK Web
+### Module 4 — Capstone ADK Web & Mở rộng
 
 | Yêu cầu | Kết quả |
 |----------|---------|
 | A2A servers :8001-:8003 | ✅ ĐANG CHẠY |
-| ADK Web :8000 | ⚠️ Cần nạp credit Gemini API |
-| Full flow A2A (W1) | ⚠️ Chờ credit API (429 RESOURCE_EXHAUSTED) |
-| Full flow MCP (W2) | ⚠️ Chờ credit API |
+| MCP SSE Server :8080 | ✅ Sẵn sàng (`mcp_server/research_tools_server_sse.py`) |
+| Free Tier Manager | ✅ Tích hợp toàn bộ 4 agents + callbacks |
+| ADK Web :8000 | ⚠️ Cần API key Gemini có credit |
+| Full flow A2A (W1) | ⚠️ Chờ API key |
+| Full flow MCP (W2) | ⚠️ Chờ API key |
 
-> **Ghi chú:** API Gemini trả về 429 RESOURCE_EXHAUSTED do hết prepayment credits. Cần nạp credit tại https://ai.studio/projects. Toàn bộ code và infrastructure đã sẵn sàng.
+> **Ghi chú:** API key Free Tier hiện tại trả về `limit: 0`. Cần kiểm tra Google Cloud project đã bật Gemini API + billing. Toàn bộ code & hạ tầng đã sẵn sàng.
 
-**📝 Kết quả 5 prompt ADK Web:** (sẽ điền sau khi nạp credit API)
+**📝 Kết quả 5 prompt ADK Web:** (sẽ điền sau khi có API key hoạt động)
 
 ### Module 5 — Governance & Observability
 
@@ -155,6 +158,7 @@ File: `logs/governance_audit.jsonl` — ghi tự động mọi lần gọi MCP/A
 | API key Free Tier `limit: 0` (429) | Cần kiểm tra project Google Cloud đã bật Gemini API + billing |
 | Không cần Conda riêng | Dùng pip system Python, vẫn hoạt động |
 | Quản lý rate limit Free Tier | Đã tạo `lab_utils/free_llm_man.py` — RPM/RPD tracking + retry backoff |
+| Tích hợp free_llm_man vào ADK agents | Dùng `before_agent_callback` trong `adk_callbacks.py` |
 
 ---
 
@@ -165,9 +169,13 @@ Lab đã hoàn thành các mục tiêu:
 2. ✅ Triển khai A2A giữa 4 agent bằng ADK (3 servers đang chạy)
 3. ✅ Xây dựng semantic routing với fallback chain (`route_with_chain`)
 4. ✅ Áp dụng data governance đa lớp (SQL guard, PII, keyword block, rate limit, audit)
-5. ⚠️ Full flow + ADK Web: code sẵn sàng, cần nạp credit Gemini API
+5. ✅ Mở rộng SSE transport (`research_tools_server_sse.py` :8080)
+6. ✅ Quản lý Free Tier (`free_llm_man.py` tích hợp toàn bộ agents)
+7. ⚠️ Full flow + ADK Web: code sẵn sàng, cần API key Gemini có credit
 
-**Điểm tự đánh giá:** 8/10 (trừ 2 điểm do chưa chạy được full flow vì hết credit API)
+### Kết quả `check_all.py`: **58/58 PASS** — 0 lỗi
+
+**Điểm tự đánh giá:** 8.5/10 (trừ 1.5 điểm do chưa chạy được full flow ADK Web vì API key)
 
 ---
 
